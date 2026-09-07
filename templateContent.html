@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+    
+.card { padding: 20px; font-family: sans-serif; }
+.box { margin-top: 10px; padding: 10px; background: #e0f7fa; }
+.alert { margin-top: 10px; padding: 10px; background: #ffe0b2; }
+
+    </style>
+</head>
+  <script>
+class AComponent {
+    constructor() {
+      this.data = {};
+    }
+  }
+  function evaluateExpression(exp, scope) {
+  try {
+    // 'with' brings scope properties into local scope (e.g., allow showBox directly)
+    return new Function('scope', `
+      with (scope) {
+        return ${exp};
+      }
+    `)(scope);
+  } catch (err) {
+    console.error(`Error evaluating expression: "${exp}"`, err);
+    return '';
+  }
+}</script>
+<body>
+    
+  <div class="card">
+    <h1>Count: <text expr="count"></text></h1>
+    <button a-click="toggleBox">Toggle Box</button>
+    <button a-click="incrementCount">Increment Count</button>
+
+    <div v-if="exports.data.showBox" class="box">
+      <p>Status: <text expr="exports.data.showBox ? 'Visible' : 'Hidden'"></text></p>
+    </div>
+
+    <div v-if="exports.data.count > 2" class="alert">
+      <p>Count <text expr="count"></text> is greater than 2!</p>
+    </div>
+  </div>
+
+   <script>
+   class ExampleComponent extends AComponent {
+    constructor() {
+      super();
+      this.data = {
+        showBox: true,
+        count: 0
+      };
+    }
+
+    toggleBox = (data) => {
+      data.showBox = !data.showBox;
+      console.log("toggleBox called");
+    }
+
+    incrementCount = (data) => {
+      data.count += 1;
+      console.log("incrementCount called");
+    }
+  }
+   let exports =  new ExampleComponent() 
+   let vif = document.querySelectorAll('[v-if]');
+
+const updateBindings = () => {
+    vif.forEach(element => {
+      const condition = element.getAttribute('v-if');
+      const isVisible = eval(condition);
+      element.style.display = isVisible ? 'block' : 'none';
+      console.log(`Element with v-if="${condition}" is now ${isVisible ? 'visible' : 'hidden'}.`);
+    });
+  };
+
+  function updateExpressions(scope) {
+  document.querySelectorAll('text[expr]').forEach(el => {
+    const expr = el.getAttribute('expr');
+    el.textContent = evaluateExpression(expr, scope);
+  });
+}
+
+let handler = new Proxy(exports.data, {
+     set: (target, property, value) => {
+       target[property] = value;
+         updateBindings();
+         updateExpressions(handler);
+         console.log(`Updated ${property} to ${value}`);
+       return true;
+     }
+   });
+   updateBindings();
+   updateExpressions(handler);
+   document.querySelector('[a-click="toggleBox"]').addEventListener('click', exports.toggleBox.bind(null, handler));
+document.querySelector('[a-click="incrementCount"]').addEventListener('click', exports.incrementCount.bind(null, handler));
+
+   </script>
+</body>
+</html>
